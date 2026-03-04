@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, Download, Loader2 } from "lucide-react";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://thozhi-backend.render.com"
 
 /* -----------------------------
    Types
