@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  message TEXT NOT NULL,
+  response TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
