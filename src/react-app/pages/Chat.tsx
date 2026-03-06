@@ -3,10 +3,6 @@ import { Send, Download, Loader2 } from "lucide-react";
 
 const API_BASE_URL = "https://thozhi-backend.onrender.com";
 
-/* -----------------------------
-   Types
------------------------------ */
-
 interface Message {
   text: string;
   sender: "user" | "bot";
@@ -23,10 +19,6 @@ interface Report {
   generated_at: string;
 }
 
-/* -----------------------------
-   Chat Component
------------------------------ */
-
 export default function ChatPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -35,8 +27,6 @@ export default function ChatPage() {
   const [lastReport, setLastReport] = useState<Report | null>(null);
 
   const chatBoxRef = useRef<HTMLDivElement>(null);
-
-  /* Persist session id */
 
   const [sessionId] = useState(() => {
     const existing = localStorage.getItem("thozhi_session");
@@ -47,18 +37,12 @@ export default function ChatPage() {
     return id;
   });
 
-  /* Auto scroll */
-
   useEffect(() => {
     chatBoxRef.current?.scrollTo({
       top: chatBoxRef.current.scrollHeight,
       behavior: "smooth"
     });
   }, [messages]);
-
-  /* -----------------------------
-     Send Message
-  ----------------------------- */
 
   const sendMessage = async () => {
 
@@ -67,10 +51,8 @@ export default function ChatPage() {
 
     setInput("");
 
-    setMessages(prev => [
-      ...prev,
-      { text, sender: "user" }
-    ]);
+    const newMessages = [...messages, { text, sender: "user" as const }];
+    setMessages(newMessages);
 
     setIsLoading(true);
 
@@ -84,7 +66,10 @@ export default function ChatPage() {
         body: JSON.stringify({
           session_id: sessionId,
           message: text,
-          history: messages
+          history: newMessages.map(m => ({
+            role: m.sender === "user" ? "user" : "assistant",
+            content: m.text
+          }))
         })
       });
 
@@ -113,7 +98,7 @@ export default function ChatPage() {
       setMessages(prev => [
         ...prev,
         {
-          text: "I'm having trouble connecting right now. Please try again.",
+          text: "Connection issue. Please try again.",
           sender: "bot"
         }
       ]);
@@ -124,10 +109,6 @@ export default function ChatPage() {
 
     }
   };
-
-  /* -----------------------------
-     Download Report
-  ----------------------------- */
 
   const downloadPDF = async () => {
 
@@ -158,10 +139,6 @@ export default function ChatPage() {
     }
   };
 
-  /* -----------------------------
-     Enter key
-  ----------------------------- */
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 
     if (e.key === "Enter" && !e.shiftKey) {
@@ -171,30 +148,15 @@ export default function ChatPage() {
 
   };
 
-  /* -----------------------------
-     UI
-  ----------------------------- */
-
   return (
     <div className="max-w-4xl mx-auto">
 
       <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden border border-white/20">
 
-        {/* Header */}
-
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6">
-
-          <h1 className="text-2xl font-bold text-white">
-            Chat with Thozhi
-          </h1>
-
-          <p className="text-indigo-100 text-sm">
-            Your compassionate AI wellness companion
-          </p>
-
+          <h1 className="text-2xl font-bold text-white">Chat with Thozhi</h1>
+          <p className="text-indigo-100 text-sm">Your compassionate AI wellness companion</p>
         </div>
-
-        {/* Chat */}
 
         <div
           ref={chatBoxRef}
@@ -272,8 +234,6 @@ export default function ChatPage() {
           )}
 
         </div>
-
-        {/* Input */}
 
         <div className="p-6 border-t bg-white/70">
 
