@@ -10,7 +10,6 @@ const API_BASE_URL = "https://thozhi-backend.onrender.com";
 interface Message {
   text: string;
   sender: "user" | "bot";
-  streaming?: boolean;
 }
 
 interface Report {
@@ -36,7 +35,6 @@ export default function ChatPage() {
   const [lastReport, setLastReport] = useState<Report | null>(null);
 
   const chatBoxRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   /* Persist session id */
 
@@ -58,10 +56,6 @@ export default function ChatPage() {
     });
   }, [messages]);
 
-  useEffect(() => {
-    return () => abortRef.current?.abort();
-  }, []);
-
   /* -----------------------------
      Send Message
   ----------------------------- */
@@ -80,24 +74,13 @@ export default function ChatPage() {
 
     setIsLoading(true);
 
-    /* Add empty bot bubble */
-
-    setMessages(prev => [
-      ...prev,
-      { text: "", sender: "bot", streaming: true }
-    ]);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
     try {
 
-      const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        signal: controller.signal,
         body: JSON.stringify({
           session_id: sessionId,
           message: text,
@@ -105,109 +88,39 @@ export default function ChatPage() {
         })
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error("Streaming failed");
+      if (!response.ok) {
+        throw new Error("API error");
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      const data = await response.json();
 
-      let buffer = "";
-
-      while (true) {
-
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() || "";
-
-        for (const part of parts) {
-
-          const line = part.trim();
-
-          if (!line.startsWith("data:")) continue;
-
-          const jsonStr = line.replace("data:", "").trim();
-
-          let parsed;
-
-          try {
-            parsed = JSON.parse(jsonStr);
-          } catch {
-            continue;
-          }
-
-          const { token, done: streamDone, report } = parsed;
-
-          if (token) {
-
-            setMessages(prev => {
-
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-
-              if (last?.sender === "bot") {
-                updated[updated.length - 1] = {
-                  ...last,
-                  text: last.text + token
-                };
-              }
-
-              return updated;
-            });
-          }
-
-          if (streamDone) {
-
-            setMessages(prev => {
-
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-
-              if (last?.sender === "bot") {
-                updated[updated.length - 1] = {
-                  ...last,
-                  streaming: false
-                };
-              }
-
-              return updated;
-            });
-
-            if (report) setLastReport(report);
-
-            break;
-          }
+      setMessages(prev => [
+        ...prev,
+        {
+          text: data.reply,
+          sender: "bot"
         }
+      ]);
+
+      if (data.report) {
+        setLastReport(data.report);
       }
 
-    } catch (err) {
+    } catch (error) {
 
-      console.error(err);
+      console.error(error);
 
-      setMessages(prev => {
-
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-
-        if (last?.sender === "bot") {
-          updated[updated.length - 1] = {
-            text: "I'm having trouble connecting right now. Please try again.",
-            sender: "bot",
-            streaming: false
-          };
+      setMessages(prev => [
+        ...prev,
+        {
+          text: "I'm having trouble connecting right now. Please try again.",
+          sender: "bot"
         }
-
-        return updated;
-      });
+      ]);
 
     } finally {
 
       setIsLoading(false);
-      abortRef.current = null;
 
     }
   };
@@ -299,26 +212,20 @@ export default function ChatPage() {
             <div
               key={index}
               className={`flex ${msg.sender === "user"
-                  ? "justify-end"
-                  : "justify-start"
+                ? "justify-end"
+                : "justify-start"
                 }`}
             >
 
               <div
                 className={`max-w-[75%] px-5 py-3 rounded-2xl ${msg.sender === "user"
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
-                    : "bg-white shadow text-gray-800"
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+                  : "bg-white shadow text-gray-800"
                   }`}
               >
 
                 <p className="text-sm whitespace-pre-wrap">
-
                   {msg.text}
-
-                  {msg.streaming && (
-                    <span className="inline-block w-[2px] h-4 bg-indigo-400 ml-1 animate-pulse" />
-                  )}
-
                 </p>
 
               </div>
@@ -327,7 +234,7 @@ export default function ChatPage() {
 
           ))}
 
-          {isLoading && messages[messages.length - 1]?.text === "" && (
+          {isLoading && (
 
             <div className="flex justify-start">
 
