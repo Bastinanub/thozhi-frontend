@@ -108,7 +108,7 @@ export default function ChatPage() {
 
     try {
       // ── Try SSE stream first ──────────────────────────────────────────────
-      const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
@@ -174,7 +174,7 @@ export default function ChatPage() {
       // ── Fallback: blocking /chat ──────────────────────────────────────────
       console.warn("Stream failed, falling back to /chat:", err);
       try {
-        const res = await fetch(`${API_BASE_URL}/chat`, {
+        const res = await fetch(`${API_BASE_URL}/api/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body,
@@ -200,7 +200,7 @@ export default function ChatPage() {
   const downloadPDF = async () => {
     if (!lastReport) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/generate-pdf`, {
+      const response = await fetch(`${API_BASE_URL}/api/generate-pdf`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(lastReport),
